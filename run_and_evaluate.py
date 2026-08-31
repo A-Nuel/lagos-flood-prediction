@@ -3,8 +3,8 @@ from src.data.make_dataset import run_full_pipeline, build_rainfall_timeseries, 
 
 print("Running pipeline...")
 grid = run_full_pipeline()
-print("Building rainfall timeseries... (SKIPPING)")
-# build_rainfall_timeseries(grid)
+print("Building rainfall timeseries...")
+build_rainfall_timeseries(grid)
 print("Building master dataset...")
 build_master_dataset(grid)
 

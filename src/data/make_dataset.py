@@ -183,7 +183,7 @@ def build_rainfall_timeseries(
     grid_ids = grid_gdf["grid_id"].values
     dfs = []
 
-    for tif_path in tif_files[-3:]: # Only use the last 3 years for local MVP to fit in RAM
+    for tif_path in tif_files:
         year = os.path.basename(tif_path).split("_")[-1].replace(".tif", "")
         logger.info(f"  Processing CHIRPS {year}...")
         with rasterio.open(tif_path) as src:
