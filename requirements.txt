@@ -1,0 +1,13 @@
+earthengine-api
+pandas
+geopandas
+osmnx
+scikit-learn
+xgboost
+shap
+matplotlib
+seaborn
+jupyter
+fastapi
+uvicorn
+python-dotenv

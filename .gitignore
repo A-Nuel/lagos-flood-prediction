@@ -1,0 +1,9 @@
+data/interim/*
+data/processed/*
+*.zip
+*.tif
+venv/
+__pycache__/
+.pytest_cache/
+*.joblib
+*.parquet
