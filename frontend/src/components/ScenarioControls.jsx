@@ -18,28 +18,43 @@ export default function ScenarioControls({
     setFetchingWeather(true);
     setWeatherNotice(null);
     try {
+      // Fetch past 7 days of recorded historical rainfall + today's forecast
       const res = await fetch(
-        'https://api.open-meteo.com/v1/forecast?latitude=6.5244&longitude=3.3792&daily=precipitation_sum&timezone=Africa%2FLagos',
+        'https://api.open-meteo.com/v1/forecast?latitude=6.5244&longitude=3.3792&daily=precipitation_sum&past_days=7&forecast_days=1&timezone=Africa%2FLagos',
         { signal: AbortSignal.timeout(6000) }
       );
       if (!res.ok) throw new Error(`Weather service returned HTTP ${res.status}`);
       const data = await res.json();
-      if (data?.daily?.precipitation_sum && Array.isArray(data.daily.precipitation_sum)) {
-        const dailyRain = Math.max(0, data.daily.precipitation_sum[0] || 0);
-        const past7d = Math.max(0, data.daily.precipitation_sum.slice(0, 7).reduce((a, b) => a + b, 0));
-        const past3d = Math.max(0, data.daily.precipitation_sum.slice(0, 3).reduce((a, b) => a + b, 0));
+      if (data?.daily?.precipitation_sum && Array.isArray(data.daily.precipitation_sum) && data.daily.precipitation_sum.length >= 7) {
+        const rawPrecip = data.daily.precipitation_sum.map((v) => (v === null || isNaN(v) ? 0 : Number(v)));
+        
+        // Today's rainfall is the latest entry (index length - 1)
+        const dailyRain = Math.max(0, rawPrecip[rawPrecip.length - 1] || 0);
+        
+        // 3-day rolling sum (today + prior 2 days)
+        const past3d = Math.max(0, rawPrecip.slice(-3).reduce((a, b) => a + b, 0));
+        
+        // 7-day rolling sum (today + prior 6 days)
+        const past7d = Math.max(0, rawPrecip.slice(-7).reduce((a, b) => a + b, 0));
+
+        // Determine current season in Lagos (April - October = rainy season)
+        const currentMonth = new Date().getMonth() + 1; // 1-12
+        const isRainy = (currentMonth >= 4 && currentMonth <= 10) ? 1 : 0;
 
         setParams((prev) => ({
           ...prev,
-          rainfall_mm: Math.round(dailyRain),
-          rainfall_3d_sum: Math.round(past3d),
-          rainfall_7d_sum: Math.round(past7d)
+          rainfall_mm: Math.round(dailyRain * 10) / 10,
+          rainfall_3d_sum: Math.round(past3d * 10) / 10,
+          rainfall_7d_sum: Math.round(past7d * 10) / 10,
+          is_rainy_season: isRainy
         }));
 
-        setWeatherNotice(`Synced live Lagos precipitation: ${dailyRain.toFixed(1)} mm (24h), ${past7d.toFixed(1)} mm (7-Day)`);
-        setTimeout(() => setWeatherNotice(null), 5000);
+        setWeatherNotice(
+          `Synced 7-Day Live Lagos Weather: ${dailyRain.toFixed(1)} mm (24h), ${past3d.toFixed(1)} mm (3-Day Rolling), ${past7d.toFixed(1)} mm (7-Day Saturation)`
+        );
+        setTimeout(() => setWeatherNotice(null), 7000);
       } else {
-        throw new Error('Malformed precipitation payload');
+        throw new Error('Incomplete daily precipitation array');
       }
     } catch (e) {
       console.warn('Failed to fetch live weather:', e);
@@ -49,6 +64,7 @@ export default function ScenarioControls({
       setFetchingWeather(false);
     }
   };
+
 
 
   const presetScenarios = [
