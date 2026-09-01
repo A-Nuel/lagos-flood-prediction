@@ -4,7 +4,7 @@ import FloodMap from './components/FloodMap';
 import ScenarioControls from './components/ScenarioControls';
 import CellDetails from './components/CellDetails';
 import ModelTransparencyModal from './components/ModelTransparencyModal';
-import { Shield, Waves, Info, MapPin, Database, Activity, ExternalLink } from 'lucide-react';
+import { Waves, Cpu, Activity, Shield, Sparkles, Compass } from 'lucide-react';
 
 export default function App() {
   const [params, setParams] = useState({
@@ -24,7 +24,6 @@ export default function App() {
   const [loadingSimulation, setLoadingSimulation] = useState(false);
   const [transparencyModalOpen, setTransparencyModalOpen] = useState(false);
 
-  // Load Initial Landmark Hotspots and Initial Simulation
   useEffect(() => {
     fetchKeyLocations();
     runSimulation();
@@ -55,12 +54,10 @@ export default function App() {
         setGridData(data.grid_predictions);
         setSummary(data.summary);
 
-        // If a cell was selected, update its predicted probability under the new simulation
         if (selectedCell) {
           const updated = data.grid_predictions.find((c) => c.grid_id === selectedCell.grid_id);
           if (updated) setSelectedCell(updated);
         } else if (data.grid_predictions.length > 0) {
-          // Default selection to first severe or high blockage cell
           const defaultCell = data.grid_predictions.find((c) => c.tier === 'severe') || data.grid_predictions[0];
           setSelectedCell(defaultCell);
         }
@@ -74,7 +71,6 @@ export default function App() {
 
   const handleSelectLocation = async (loc) => {
     setActiveLocation(loc);
-    // Find closest cell or fetch point prediction
     try {
       const res = await fetch('/api/predict', {
         method: 'POST',
@@ -106,96 +102,67 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* 1. Mandatory Early-Stage Indicator Caveat Banner */}
+    <div className="relative w-screen h-screen overflow-hidden bg-[#030712] text-slate-100 font-sans select-none">
+      {/* 1. Base Layer: Full-Bleed Spatial Map */}
+      <FloodMap
+        gridData={gridData}
+        selectedCell={selectedCell}
+        onSelectCell={(cell) => setSelectedCell(cell)}
+        keyLocations={keyLocations}
+        activeLocation={activeLocation}
+        onSelectLocation={handleSelectLocation}
+      />
+
+      {/* 2. Top-Left Floating Header Brand HUD */}
+      <div className="fixed top-4 left-4 sm:left-6 z-40 pointer-events-auto">
+        <div className="glass-panel border border-slate-700/60 rounded-2xl p-2 sm:px-3.5 sm:py-2 flex items-center gap-3 shadow-[0_15px_35px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
+          <div className="p-2 bg-gradient-to-tr from-cyan-600 to-blue-500 rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.4)] text-white">
+            <Waves className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-extrabold text-sm text-white tracking-tight">
+                LAGOS HYDRO-TACTICAL
+              </span>
+              <span className="text-[9px] uppercase font-mono font-bold bg-cyan-500/15 text-cyan-300 px-1.5 py-0.5 rounded border border-cyan-500/30">
+                v1.0
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-400 font-mono hidden sm:block">500M RESOLUTION ML SIMULATOR</p>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Top-Center Floating Caveat & Safety Ticker */}
       <CaveatBanner onOpenTransparencyModal={() => setTransparencyModalOpen(true)} />
 
-      {/* 2. Top Header Bar */}
-      <header className="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md px-6 py-4">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-gradient-to-tr from-cyan-600 to-blue-500 rounded-xl shadow-md text-white">
-              <Waves className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-extrabold tracking-tight text-white m-0">
-                  Lagos Flood Risk Prediction
-                </h1>
-                <span className="text-[10px] uppercase tracking-wider font-bold bg-cyan-500/10 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/30">
-                  v1.0 Safety Model
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                500m Resolution Hydrological, Terrain & Drainage Blockage Risk Model
-              </p>
-            </div>
-          </div>
+      {/* 4. Top-Right Telemetry & Settings Dock */}
+      <div className="fixed top-4 right-4 sm:right-6 z-40 flex items-center gap-2 pointer-events-auto">
+        <button
+          onClick={() => setTransparencyModalOpen(true)}
+          className="glass-panel border border-slate-700/60 hover:border-cyan-500/40 text-slate-200 hover:text-white px-3 py-2 rounded-2xl transition flex items-center gap-1.5 text-xs font-semibold shadow-lg cursor-pointer backdrop-blur-2xl"
+        >
+          <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+          <span className="hidden sm:inline">Telemetry & SHAP</span>
+        </button>
+      </div>
 
-          <div className="flex items-center gap-3 text-xs">
-            <div className="bg-slate-800/80 border border-slate-700/80 px-3 py-1.5 rounded-xl flex items-center gap-2">
-              <Activity className="w-4 h-4 text-emerald-400" />
-              <span className="text-slate-300">Default Model:</span>
-              <strong className="text-emerald-300 font-mono">
-                {params.model_choice === 'random_forest' ? 'Random Forest (Option B)' : 'XGBoost (Option A)'}
-              </strong>
-            </div>
+      {/* 5. Left Floating HUD: Scenario Controls */}
+      <ScenarioControls
+        params={params}
+        setParams={setParams}
+        onRunSimulation={runSimulation}
+        loadingSimulation={loadingSimulation}
+        summary={summary}
+      />
 
-            <button
-              onClick={() => setTransparencyModalOpen(true)}
-              className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 font-medium cursor-pointer"
-            >
-              <Info className="w-4 h-4 text-cyan-400" />
-              <span>Metrics & SHAP</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      {/* 6. Right Floating HUD: Node Telemetry Details */}
+      <CellDetails
+        selectedCell={selectedCell}
+        modelChoice={params.model_choice}
+      />
 
-      {/* 3. Main Dashboard Workspace */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Scenario Simulator & Controls (4 cols) */}
-        <div className="lg:col-span-4 space-y-6">
-          <ScenarioControls
-            params={params}
-            setParams={setParams}
-            onRunSimulation={runSimulation}
-            loadingSimulation={loadingSimulation}
-            summary={summary}
-          />
-        </div>
-
-        {/* Center/Right Column: Interactive Map & Cell Inspector (8 cols) */}
-        <div className="lg:col-span-8 flex flex-col gap-6">
-          {/* Leaflet Flood Map (Takes majority height) */}
-          <div className="flex-1 min-h-[500px]">
-            <FloodMap
-              gridData={gridData}
-              selectedCell={selectedCell}
-              onSelectCell={(cell) => setSelectedCell(cell)}
-              keyLocations={keyLocations}
-              activeLocation={activeLocation}
-              onSelectLocation={handleSelectLocation}
-            />
-          </div>
-
-          {/* Cell Detail Inspector Card */}
-          <CellDetails
-            selectedCell={selectedCell}
-            modelChoice={params.model_choice}
-          />
-        </div>
-      </main>
-
-      {/* 4. Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-950 py-4 px-6 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>Lagos Flood Risk Prediction Project &copy; 2026. Data sources: GEE, CHIRPS, OSM, LASEMA.</span>
-          <span className="text-slate-400">Option B Safety Standard: Prioritizing early flood detection.</span>
-        </div>
-      </footer>
-
-      {/* 5. Transparency Modal */}
+      {/* 7. Methodology Command-Room Modal */}
       <ModelTransparencyModal
         isOpen={transparencyModalOpen}
         onClose={() => setTransparencyModalOpen(false)}
@@ -203,4 +170,5 @@ export default function App() {
     </div>
   );
 }
+
 
