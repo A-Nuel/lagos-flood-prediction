@@ -202,55 +202,124 @@ def compare_models(
 
 
 # ─────────────────────────────────────────────────────────
-# SMOKE TEST
+# THRESHOLD TUNING & PRECISION-RECALL TRADEOFF ANALYSIS
 # ─────────────────────────────────────────────────────────
 
-if __name__ == "__main__":
-    import sys
-    sys.path.insert(0, ".")
-    from src.features.build_features import engineer_features, get_feature_columns
-    from src.models.train_model import (
-        train_baseline, train_random_forest,
-        train_xgboost, compute_class_weights
+def evaluate_threshold_tradeoffs():
+    import duckdb
+    from sklearn.model_selection import GroupKFold
+    import xgboost as xgb
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.metrics import (
+        precision_score, recall_score, f1_score,
+        confusion_matrix, roc_auc_score, average_precision_score
     )
+    from sklearn.utils.class_weight import compute_sample_weight
 
-    logger.info("=== evaluate smoke test ===")
-    np.random.seed(42)
-    n = 600
-    raw = pd.DataFrame({
-        "grid_id": [f"LG_{i:06d}" for i in np.repeat(range(60), 10)],
-        "date": pd.date_range("2020-01-01", periods=10).tolist() * 60,
-        **{col: np.random.uniform(0, 1, n) for col in [
-            "rainfall_mm","rainfall_3d_sum","rainfall_7d_sum","is_rainy_season",
-            "elevation_m","slope_deg","impervious_pct","road_density",
-            "dist_to_water_m","drain_density","drain_coverage_gap",
-            "n_waste_sites_nearby","n_markets_nearby",
-            "blockage_event_count","composite_blockage_risk",
-        ]},
-        "flood_risk_label": np.random.choice([0,1,2,3], n, p=[0.65,0.2,0.1,0.05]),
-    })
-    raw["elevation_m"] *= 20
-    raw["dist_to_water_m"] *= 2000
-    raw["slope_deg"] *= 15
+    parquet_path = "data/processed/master_dataset.parquet"
+    logger.info(f"Loading deterministic dataset via DuckDB from {parquet_path}...")
+    con = duckdb.connect()
+    
+    # 1. Load all positive instances (all 499 rows)
+    df_pos = con.execute(f"SELECT * FROM read_parquet('{parquet_path}') WHERE flood_risk_label > 0").df()
+    n_pos = len(df_pos)
+    
+    # 2. Deterministic negative sample using reproducible ORDER BY hash / seed
+    df_neg = con.execute(f"""
+        SELECT * FROM read_parquet('{parquet_path}') 
+        WHERE flood_risk_label = 0 
+        ORDER BY hash(grid_id, date) 
+        LIMIT {n_pos * 50}
+    """).df()
+    df_sampled = pd.concat([df_pos, df_neg], ignore_index=True)
+    
+    features = [
+        "rainfall_mm", "rainfall_3d_sum", "rainfall_7d_sum", "is_rainy_season",
+        "elevation_m", "slope_deg", "impervious_pct", "road_density",
+        "dist_to_water_m", "drain_density", "drain_coverage_gap", "composite_blockage_risk"
+    ]
+    df_sampled[features] = df_sampled[features].fillna(0)
+    
+    X = df_sampled[features]
+    y = df_sampled["flood_risk_label"].astype(int)
+    grid_ids = df_sampled["grid_id"]
+    
+    logger.info(f"Running 5-Fold Spatial GroupKFold CV across {grid_ids.nunique()} unique grid cells...")
+    gkf = GroupKFold(n_splits=5)
+    
+    oof_xgb_probs = np.zeros(len(y))
+    oof_rf_probs = np.zeros(len(y))
+    
+    for fold, (train_idx, val_idx) in enumerate(gkf.split(X, y, groups=grid_ids)):
+        X_tr, X_val = X.iloc[train_idx], X.iloc[val_idx]
+        y_tr, y_val = y.iloc[train_idx], y.iloc[val_idx]
+        
+        sw = compute_sample_weight(class_weight='balanced', y=y_tr)
+        xgb_clf = xgb.XGBClassifier(
+            n_estimators=120, max_depth=6, learning_rate=0.08,
+            subsample=0.8, colsample_bytree=0.8, random_state=42, n_jobs=-1
+        )
+        xgb_clf.fit(X_tr, y_tr, sample_weight=sw)
+        oof_xgb_probs[val_idx] = xgb_clf.predict_proba(X_val)[:, 1]
+        
+        rf_clf = RandomForestClassifier(
+            n_estimators=100, class_weight="balanced", max_depth=10, random_state=42, n_jobs=-1
+        )
+        rf_clf.fit(X_tr, y_tr)
+        oof_rf_probs[val_idx] = rf_clf.predict_proba(X_val)[:, 1]
+        
+    total_pos = (y == 1).sum()
+    total_neg = (y == 0).sum()
+    
+    print("\n" + "="*95)
+    print(f" 5-FOLD OUT-OF-FOLD SPATIAL CROSS-VALIDATION (100% of spatial cells tested on unseen models)")
+    print(f" Total Samples = {len(y)} | True Flood Events = {total_pos} | Non-Floods = {total_neg}")
+    print(f" XGBoost 5-Fold OOF ROC-AUC: {roc_auc_score(y, oof_xgb_probs):.4f} | PR-AUC: {average_precision_score(y, oof_xgb_probs):.4f}")
+    print(f" Random Forest 5-Fold OOF ROC-AUC: {roc_auc_score(y, oof_rf_probs):.4f} | PR-AUC: {average_precision_score(y, oof_rf_probs):.4f}")
+    print("="*95)
+    
+    thresholds = [0.50, 0.45, 0.40, 0.35, 0.30, 0.25, 0.20, 0.15, 0.10, 0.05]
+    results = []
+    
+    for t in thresholds:
+        preds = (oof_xgb_probs >= t).astype(int)
+        tn, fp, fn, tp = confusion_matrix(y, preds).ravel()
+        p = precision_score(y, preds, zero_division=0)
+        r = recall_score(y, preds, zero_division=0)
+        f1 = f1_score(y, preds, zero_division=0)
+        results.append({
+            "Model": "XGBoost",
+            "Threshold": f"{t:.2f}",
+            "Precision": f"{p*100:.2f}%",
+            "Recall": f"{r*100:.2f}%",
+            "F1-Score": f"{f1:.4f}",
+            "Caught (TP)": tp,
+            "Missed (FN)": fn,
+            "False Alarm (FP)": fp,
+            "Clean (TN)": tn
+        })
+        
+    for t in [0.50, 0.40, 0.35, 0.30, 0.20, 0.10]:
+        rf_preds = (oof_rf_probs >= t).astype(int)
+        tn, fp, fn, tp = confusion_matrix(y, rf_preds).ravel()
+        p_rf = precision_score(y, rf_preds, zero_division=0)
+        r_rf = recall_score(y, rf_preds, zero_division=0)
+        f1_rf = f1_score(y, rf_preds, zero_division=0)
+        results.append({
+            "Model": "Random Forest",
+            "Threshold": f"{t:.2f}",
+            "Precision": f"{p_rf*100:.2f}%",
+            "Recall": f"{r_rf*100:.2f}%",
+            "F1-Score": f"{f1_rf:.4f}",
+            "Caught (TP)": tp,
+            "Missed (FN)": fn,
+            "False Alarm (FP)": fp,
+            "Clean (TN)": tn
+        })
+        
+    res_df = pd.DataFrame(results)
+    print("\n" + res_df.to_string(index=False))
+    print("\n" + "="*95)
 
-    featured  = engineer_features(raw)
-    feat_cols = [c for c in get_feature_columns() if c in featured.columns]
-    X = featured[feat_cols]
-    y = featured["flood_risk_label"]
-
-    split = int(len(X) * 0.8)
-    X_tr, X_te = X.iloc[:split], X.iloc[split:]
-    y_tr, y_te = y.iloc[:split], y.iloc[split:]
-
-    cw  = compute_class_weights(y_tr)
-    lr  = train_baseline(X_tr, y_tr)
-    rf  = train_random_forest(X_tr, y_tr, n_estimators=50)
-    xgb = train_xgboost(X_tr, y_tr, cw)
-
-    xgb_bundle = joblib.load(MODELS_DIR / "xgboost.pkl")
-    evaluate_model(lr,  X_te, y_te, "Logistic Regression")
-    evaluate_model(rf,  X_te, y_te, "Random Forest")
-    evaluate_model(xgb_bundle, X_te, y_te, "XGBoost")
-    shap_feature_importance(xgb_bundle, X_te, top_n=10, sample_n=100)
-    compare_models(X_te, y_te)
-    print("\nEvaluate smoke test passed.")
+if __name__ == "__main__":
+    evaluate_threshold_tradeoffs()

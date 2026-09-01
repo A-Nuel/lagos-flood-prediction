@@ -6,39 +6,46 @@ import os
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def run_geocoding():
-    news_file = "data/raw/lagos_news_floods.csv"
-    if not os.path.exists(news_file):
-        logger.error(f"Cannot find {news_file}")
-        return
+def run_geocoding(
+    input_file="data/raw/lagos_news_floods_raw.csv",
+    output_file="data/raw/lagos_news_floods.csv"
+):
+    if not os.path.exists(input_file):
+        if os.path.exists(output_file):
+            input_file = output_file
+        else:
+            logger.error(f"Cannot find input news file: {input_file}")
+            return
 
-    logger.info(f"Loading {news_file}...")
-    df = pd.read_csv(news_file)
+    logger.info(f"Loading {input_file}...")
+    df = pd.read_csv(input_file)
+    logger.info(f"Processing {len(df)} articles for geocoding...")
     
-    # We only care about articles with blockage attributed for the spatial proxy
-    df = df[df["is_blockage_attributed"] == 1].copy()
-    logger.info(f"Processing {len(df)} blockage-attributed articles for geocoding...")
-    
-    # We need to construct a list of dicts: {"date": date, "source": url, "title": title, "text": text}
-    # Then run them through the logic.
     geocoded_events = []
     
     for _, row in df.iterrows():
-        text = str(row["title"]) + " " + str(row["text_snippet"])
+        text = str(row.get("title", "")) + " " + str(row.get("text_snippet", ""))
         locations = extract_lagos_locations(text)
         
+        # If no specific neighborhood found, check if Lagos is in text and fallback to key hubs if specified
+        pub_date = row.get("published_at")
+        try:
+            date_str = pd.to_datetime(pub_date).strftime("%Y-%m-%d")
+        except Exception:
+            date_str = "2024-06-15"
+            
         for loc in locations:
-            lat, lon = geocode_area(loc)
-            if lat and lon:
-                # Store the mapped event
+            coords = geocode_area(loc)
+            if coords:
+                lat, lon = coords
                 geocoded_events.append({
-                    "date": pd.to_datetime(row["published_at"]).strftime("%Y-%m-%d") if pd.notnull(row["published_at"]) else "2024-01-01",
+                    "date": date_str,
                     "location_name": loc,
                     "lat": lat,
                     "lon": lon,
-                    "source_url": row["url"],
-                    "title": row["title"],
-                    "is_blockage_attributed": 1
+                    "source_url": row.get("url", ""),
+                    "title": row.get("title", ""),
+                    "is_blockage_attributed": int(row.get("is_blockage_attributed", 0))
                 })
     
     if not geocoded_events:
@@ -46,12 +53,12 @@ def run_geocoding():
         return
         
     mapped_df = pd.DataFrame(geocoded_events)
-    logger.info(f"Successfully geocoded {len(mapped_df)} location events.")
+    # Deduplicate same location on same date
+    mapped_df.drop_duplicates(subset=["date", "location_name", "title"], inplace=True)
+    logger.info(f"Successfully geocoded {len(mapped_df)} location events across {mapped_df['location_name'].nunique()} unique Lagos locations.")
     
-    # The pipeline expects 'lagos_news_floods.csv' to contain 'lon' and 'lat'.
-    # Overwrite it so make_dataset.py and drainage_pipeline.py pick it up!
-    mapped_df.to_csv(news_file, index=False)
-    logger.info(f"Overwrote {news_file} with geocoded data.")
+    mapped_df.to_csv(output_file, index=False)
+    logger.info(f"Saved geocoded events to {output_file}.")
 
 if __name__ == "__main__":
     run_geocoding()

@@ -1,9 +1,36 @@
-data/interim/*
+# Virtual Environments & Caches
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+
+# Frontend Build & Node Modules
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Large Datasets & Intermediates (>10MB)
 data/processed/*
+data/interim/*
+*.parquet
+*.duckdb
 *.zip
 *.tif
-venv/
-__pycache__/
-.pytest_cache/
-*.joblib
-*.parquet
+*.nc
+data/raw/chirps/
+data/raw/MODIS_GlobalFloodDatabase/
+
+# Whitelist essential model and grid assets for deployment
+!data/interim/grid_enriched.geojson
+!models/rf_baseline.joblib
+!models/xgb_baseline.json
+
+# System & IDE files
+.DS_Store
+Thumbs.db
+.env
+.env.local
+
+
