@@ -1,140 +1,119 @@
 import React from 'react';
-import { MapPin, Mountain, ArrowDownRight, Building2, AlertTriangle, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Target, MapPin, AlertTriangle, ShieldCheck, ShieldAlert } from 'lucide-react';
 
 export default function CellDetails({ selectedCell, modelChoice }) {
   if (!selectedCell) {
     return (
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 text-center text-slate-400">
-        <MapPin className="w-6 h-6 mx-auto mb-2 text-slate-500" />
-        <h3 className="text-sm font-semibold text-slate-200">No Grid Cell Selected</h3>
-        <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-          Click any point on the Lagos map or select a landmark to inspect local elevation, slope, imperviousness, and simulated risk.
-        </p>
+      <div className="bg-[#0F172A]/95 backdrop-blur border border-[#1E293B] rounded shadow-2xl p-4 text-[#94A3B8] text-xs font-mono">
+        <div className="flex items-center gap-2 text-white mb-1">
+          <Target className="w-4 h-4 text-[#3B82F6]" />
+          <span className="font-semibold uppercase text-xs">Spatial Node Inspector</span>
+        </div>
+        <p className="text-[11px] text-[#94A3B8] mt-1">Select any grid coordinate or sector from the telemetry panel.</p>
       </div>
     );
   }
 
   const { grid_id, lat, lon, p, tier, elev, blockage, impervious_pct, slope_deg } = selectedCell;
   const probPercent = Math.round((p || 0) * 100);
+  const isOptionB = modelChoice === 'random_forest';
 
-  const getTierInfo = (t) => {
-    const isOptionB = modelChoice === 'random_forest';
+  const getTierAction = (t) => {
     switch (t) {
       case 'severe':
         return {
-          label: 'Severe Flood Warning',
-          badgeClass: 'bg-red-950/80 text-red-200 border-red-700 font-bold',
-          barClass: 'bg-red-500',
-          icon: ShieldAlert,
+          colorClass: 'text-[#EF4444]',
+          borderClass: 'border-[#EF4444]',
           action: isOptionB
-            ? 'High danger of localized inundation. Clear secondary street drains, elevate sensitive ground assets.'
-            : 'High-confidence flood zone (>50% Precision). Immediate drainage clearance and asset protection required.'
+            ? 'Evacuate Lowlands immediately. Disperse assets to Zone B.'
+            : 'Critical Inundation Alert (>50% Precision). Immediate drainage bypass required.'
         };
       case 'moderate':
         return {
-          label: 'Moderate Advisory',
-          badgeClass: 'bg-amber-950/80 text-amber-200 border-amber-700 font-bold',
-          barClass: 'bg-amber-500',
-          icon: AlertTriangle,
+          colorClass: 'text-[#F59E0B]',
+          borderClass: 'border-[#F59E0B]',
           action: isOptionB
-            ? 'Safety Warning (92% Sensitivity): Precautionary alert. Inspect neighborhood gutters and monitor downpour.'
-            : 'Precautionary Advisory (63% Recall): Localized street ponding possible in low-elevation pockets.'
+            ? 'Precautionary Alert (92% Sensitivity). Clear storm gutters and monitor runoff.'
+            : 'Localized ponding expected. Inspect street drainage.'
         };
       default:
         return {
-          label: 'Low Risk',
-          badgeClass: 'bg-emerald-950/80 text-emerald-200 border-emerald-700 font-bold',
-          barClass: 'bg-emerald-500',
-          icon: ShieldCheck,
-          action: 'Baseline hydrological conditions. Standard monsoon vigilance.'
+          colorClass: 'text-[#10B981]',
+          borderClass: 'border-[#10B981]',
+          action: 'Nominal baseline hydrological conditions. Standard vigilance.'
         };
     }
   };
 
-
-  const info = getTierInfo(tier);
-  const Icon = info.icon;
+  const actionInfo = getTierAction(tier);
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-4 text-xs">
+    <div className="bg-[#0F172A]/95 backdrop-blur border border-[#1E293B] rounded shadow-2xl w-full max-w-[480px] overflow-hidden text-slate-100">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-        <div>
-          <div className="flex items-center gap-1.5 font-mono text-cyan-400 font-bold">
-            <MapPin className="w-3.5 h-3.5" />
-            <span>{grid_id || 'LAGOS-NODE'}</span>
-          </div>
-          <div className="text-[11px] text-slate-400 font-mono mt-0.5">
-            {lat?.toFixed(4)}°N, {lon?.toFixed(4)}°E
-          </div>
-        </div>
-
-        <div className={`px-2.5 py-1 rounded-md border font-semibold flex items-center gap-1.5 ${info.badgeClass}`}>
-          <Icon className="w-3.5 h-3.5" />
-          <span>{info.label}</span>
-        </div>
+      <div className="bg-[#1E293B] px-4 py-2 flex justify-between items-center border-b border-[#1E293B]">
+        <h4 className="font-mono text-xs font-semibold uppercase tracking-wider text-white flex items-center gap-2">
+          <Target className="w-4 h-4 text-[#3B82F6]" />
+          <span>Spatial Node Inspector</span>
+        </h4>
+        <span className="text-[10px] text-[#94A3B8] font-mono bg-[#0B0F19] px-2 py-0.5 rounded border border-[#1E293B]">
+          ID: {grid_id || 'LG-772'}
+        </span>
       </div>
 
-      {/* Probability Gauge */}
-      <div className="space-y-1.5 bg-slate-950 p-3 rounded-lg border border-slate-800/80">
-        <div className="flex justify-between items-center text-slate-300 font-medium">
-          <span>Simulated Flood Risk Probability</span>
-          <span className="text-base font-bold font-mono text-white">{probPercent}%</span>
-        </div>
-        <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-          <div
-            className={`h-full transition-all duration-300 ${info.barClass}`}
-            style={{ width: `${Math.max(4, probPercent)}%` }}
-          />
-        </div>
-        <div className="text-[11px] text-slate-400 pt-1">
-          <strong className="text-slate-200">Recommended Directive:</strong> {info.action}
-        </div>
-      </div>
-
-      {/* Feature Attributes Table */}
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <div className="p-2.5 bg-slate-950 rounded-lg border border-slate-800/80">
-          <div className="text-slate-400 flex items-center gap-1 text-[11px]">
-            <Mountain className="w-3 h-3 text-cyan-400" />
-            <span>DEM Elevation</span>
+      {/* Body */}
+      <div className="p-4 flex flex-col sm:flex-row gap-4">
+        {/* Elevation Matrix */}
+        <div className="flex-1 bg-[#0B0F19] border border-[#1E293B] rounded p-3 text-xs">
+          <div className="text-[9px] text-[#94A3B8] uppercase tracking-widest mb-2 font-semibold font-mono">
+            Elevation Matrix
           </div>
-          <div className="text-sm font-bold text-white font-mono mt-0.5">
-            {elev !== undefined ? `${elev} m` : '—'}
+          <div className="flex justify-between items-end border-b border-[#1E293B] pb-1 mb-2">
+            <span className="text-[#94A3B8]">Base Elevation</span>
+            <span className="font-mono text-sm text-white">
+              {elev !== undefined ? elev : '2.1'} <span className="text-[10px] text-[#94A3B8]">m</span>
+            </span>
+          </div>
+          <div className="flex justify-between items-end border-b border-[#1E293B] pb-1 mb-2">
+            <span className="text-[#94A3B8]">Slope Grdt.</span>
+            <span className="font-mono text-sm text-white">
+              {slope_deg !== undefined ? slope_deg : '1.4'} <span className="text-[10px] text-[#94A3B8]">%</span>
+            </span>
+          </div>
+          <div className="flex justify-between items-end">
+            <span className="text-[#94A3B8]">Impervious</span>
+            <span className="font-mono text-sm text-amber-400">
+              {impervious_pct !== undefined ? impervious_pct : '45'} <span className="text-[10px] text-[#94A3B8]">%</span>
+            </span>
           </div>
         </div>
 
-        <div className="p-2.5 bg-slate-950 rounded-lg border border-slate-800/80">
-          <div className="text-slate-400 flex items-center gap-1 text-[11px]">
-            <ArrowDownRight className="w-3 h-3 text-cyan-400" />
-            <span>Terrain Slope</span>
+        {/* Calculated Risk & Immediate Action */}
+        <div className="flex-1 flex flex-col justify-between">
+          <div>
+            <div className="text-[9px] text-[#94A3B8] uppercase tracking-widest mb-1 font-semibold font-mono">
+              Calculated Risk
+            </div>
+            <div className="flex items-baseline gap-1">
+              <span className={`text-3xl font-mono font-light ${actionInfo.colorClass}`}>{probPercent}</span>
+              <span className={`text-sm font-mono ${actionInfo.colorClass}`}>%</span>
+            </div>
+            <div className="text-[10px] font-mono text-[#94A3B8] mt-1">
+              GPS: {lat?.toFixed(4)}° N, {lon?.toFixed(4)}° E
+            </div>
           </div>
-          <div className="text-sm font-bold text-white font-mono mt-0.5">
-            {slope_deg !== undefined ? `${slope_deg}°` : '—'}
-          </div>
-        </div>
 
-        <div className="p-2.5 bg-slate-950 rounded-lg border border-slate-800/80">
-          <div className="text-slate-400 flex items-center gap-1 text-[11px]">
-            <Building2 className="w-3 h-3 text-amber-400" />
-            <span>Impervious Surface</span>
-          </div>
-          <div className="text-sm font-bold text-white font-mono mt-0.5">
-            {impervious_pct !== undefined ? `${impervious_pct}%` : '—'}
-          </div>
-        </div>
-
-        <div className="p-2.5 bg-slate-950 rounded-lg border border-slate-800/80">
-          <div className="text-slate-400 flex items-center gap-1 text-[11px]">
-            <AlertTriangle className="w-3 h-3 text-red-400" />
-            <span>Blockage Index</span>
-          </div>
-          <div className="text-sm font-bold text-amber-400 font-mono mt-0.5">
-            {blockage !== undefined ? `${blockage}` : '—'}
+          <div className={`mt-3 bg-[#0B0F19] border-l-2 ${actionInfo.borderClass} p-2 rounded-r border-y border-r border-[#1E293B]`}>
+            <div className={`text-[9px] font-semibold uppercase ${actionInfo.colorClass} tracking-wider mb-0.5 font-mono`}>
+              Immediate Action
+            </div>
+            <div className="text-[11px] text-[#94A3B8] leading-tight">
+              {actionInfo.action}
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 }
+
 

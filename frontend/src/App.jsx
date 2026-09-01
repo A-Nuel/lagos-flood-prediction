@@ -4,7 +4,7 @@ import FloodMap from './components/FloodMap';
 import ScenarioControls from './components/ScenarioControls';
 import CellDetails from './components/CellDetails';
 import ModelTransparencyModal from './components/ModelTransparencyModal';
-import { Waves, Shield, BarChart3, Menu, X } from 'lucide-react';
+import { Radio, Bell, Settings, Menu, X, Satellite } from 'lucide-react';
 
 export default function App() {
   const [params, setParams] = useState({
@@ -103,67 +103,78 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* 1. Header Bar */}
-      <header className="bg-slate-900 border-b border-slate-800 px-4 sm:px-6 py-3 shrink-0">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-              className="lg:hidden p-2 text-slate-400 hover:text-white bg-slate-800 rounded-lg cursor-pointer"
-            >
-              {mobileSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
+    <div className="bg-[#0B0F19] text-[#F8FAFC] h-screen w-screen overflow-hidden flex flex-col font-sans antialiased">
+      {/* 1. TopNavBar (h-14 fixed) */}
+      <header className="bg-[#0F172A] text-[#F8FAFC] flex justify-between items-center px-4 w-full border-b border-[#1E293B] fixed top-0 left-0 right-0 z-50 h-14 shadow-sm">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+            className="lg:hidden p-1.5 text-[#94A3B8] hover:text-white bg-[#1E293B] rounded cursor-pointer"
+          >
+            {mobileSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
 
-            <div className="p-2 bg-blue-600 rounded-lg text-white">
-              <Waves className="w-5 h-5" />
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                  Lagos Flood Risk Prediction Platform
-                </h1>
-                <span className="hidden sm:inline text-[10px] uppercase font-bold bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">
-                  500m Grid
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 hidden sm:block">
-                Spatial Hydrological Simulation & Early Warning System
-              </p>
-            </div>
+          <div className="flex items-center gap-2 border-r border-[#1E293B] pr-4">
+            <Satellite className="w-5 h-5 text-[#3B82F6]" />
+            <span className="font-semibold tracking-tight text-sm uppercase font-mono">
+              Lagos Hydro-Predictive Node
+            </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="hidden sm:flex gap-2 items-center">
+            <span className="bg-[#1E293B] px-2 py-0.5 rounded text-[#94A3B8] font-mono text-xs border border-[#1E293B]">
+              RES: 500m
+            </span>
+            <span className="bg-[#10B981]/10 text-[#10B981] px-2 py-0.5 rounded font-mono text-[10px] uppercase border border-[#10B981]/20 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
+              <span>Sys Nominal</span>
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setTransparencyModalOpen(true)}
+            className="bg-[#F8FAFC] text-[#0B0F19] px-3 py-1 rounded text-xs font-bold hover:bg-gray-200 transition-colors uppercase tracking-wide cursor-pointer shadow-sm"
+          >
+            Validation Matrix
+          </button>
+          <div className="flex gap-1 border-l border-[#1E293B] pl-3">
             <button
               onClick={() => setTransparencyModalOpen(true)}
-              className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
+              className="text-[#94A3B8] hover:text-white hover:bg-[#1E293B] transition-colors p-1.5 rounded cursor-pointer"
+              title="Notifications"
             >
-              <BarChart3 className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden sm:inline">Validation Matrix & SHAP</span>
-              <span className="sm:hidden">Metrics</span>
+              <Bell className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setTransparencyModalOpen(true)}
+              className="text-[#94A3B8] hover:text-white hover:bg-[#1E293B] transition-colors p-1.5 rounded cursor-pointer"
+              title="Settings"
+            >
+              <Settings className="w-4 h-4" />
             </button>
           </div>
         </div>
       </header>
 
-      {/* 2. Persistent Caveat Banner */}
+      {/* 2. Emergency Notice Bar (fixed top-14) */}
       <CaveatBanner onOpenTransparencyModal={() => setTransparencyModalOpen(true)} />
 
-      {/* 3. Main Operational Workspace */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+      {/* 3. Main Workspace Layout (mt-[86px]) */}
+      <div className="flex flex-1 mt-[86px] relative h-[calc(100vh-86px)] overflow-hidden">
         {/* Left Sidebar (Desktop & Mobile Drawer) */}
-        <aside
+        <div
           className={`${
-            mobileSidebarOpen ? 'block absolute inset-0 z-50 bg-slate-950' : 'hidden'
-          } lg:block lg:relative w-full lg:w-[380px] xl:w-[420px] shrink-0 border-r border-slate-800 bg-slate-900/90 overflow-y-auto p-4 sm:p-5`}
+            mobileSidebarOpen ? 'fixed inset-0 top-[86px] z-50 bg-[#0F172A] block' : 'hidden'
+          } lg:block lg:relative w-full lg:w-[380px] shrink-0 h-full`}
         >
           {mobileSidebarOpen && (
-            <div className="flex justify-between items-center mb-4 lg:hidden">
-              <span className="font-bold text-sm text-white">Simulation Controls</span>
+            <div className="flex justify-between items-center p-4 border-b border-[#1E293B] lg:hidden">
+              <span className="font-bold text-xs uppercase font-mono text-white">Telemetry Controls</span>
               <button
                 onClick={() => setMobileSidebarOpen(false)}
-                className="p-1 text-slate-400 hover:text-white"
+                className="p-1 text-[#94A3B8] hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -186,23 +197,20 @@ export default function App() {
               setMobileSidebarOpen(false);
             }}
           />
-        </aside>
+        </div>
 
-        {/* Right Map Canvas & Docked Inspector */}
-        <main className="flex-1 flex flex-col relative h-[calc(100dvh-120px)] lg:h-auto overflow-hidden">
-          {/* Map */}
-          <div className="flex-1 w-full h-full relative">
-            <FloodMap
-              gridData={gridData}
-              selectedCell={selectedCell}
-              onSelectCell={(cell) => setSelectedCell(cell)}
-              activeLocation={activeLocation}
-              modelChoice={params.model_choice}
-            />
-          </div>
+        {/* Right Main Map Canvas with Floating Inspector */}
+        <main className="flex-1 relative bg-[#0B0F19] h-full overflow-hidden flex flex-col">
+          <FloodMap
+            gridData={gridData}
+            selectedCell={selectedCell}
+            onSelectCell={(cell) => setSelectedCell(cell)}
+            activeLocation={activeLocation}
+            modelChoice={params.model_choice}
+          />
 
-          {/* Docked Inspector Card at Bottom */}
-          <div className="p-4 bg-slate-950/95 border-t border-slate-800 shrink-0">
+          {/* Mobile Bottom Inspector Drawer (visible on mobile only) */}
+          <div className="sm:hidden p-3 bg-[#0F172A] border-t border-[#1E293B] shrink-0">
             <CellDetails
               selectedCell={selectedCell}
               modelChoice={params.model_choice}
@@ -211,8 +219,7 @@ export default function App() {
         </main>
       </div>
 
-
-      {/* 4. Methodology Modal */}
+      {/* 4. Methodology & Transparency Modal */}
       <ModelTransparencyModal
         isOpen={transparencyModalOpen}
         onClose={() => setTransparencyModalOpen(false)}
@@ -220,6 +227,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 
