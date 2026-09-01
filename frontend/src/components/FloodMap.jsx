@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap, ZoomControl } from 'react-leaflet';
 import { Radio } from 'lucide-react';
-import CellDetails from './CellDetails';
 
 function MapController({ center, zoom }) {
   const map = useMap();
@@ -54,49 +53,39 @@ export default function FloodMap({
   const isOptionB = modelChoice === 'random_forest';
 
   return (
-    <div className="relative w-full h-full min-h-[420px] bg-[#0B0F19] flex-1 overflow-hidden">
-      {/* 1. Floating Spatial Node Inspector (Bottom-Left on Desktop) */}
-      <div className="absolute bottom-6 left-6 z-[400] max-w-[calc(100vw-3rem)] pointer-events-auto hidden sm:block">
-        <CellDetails selectedCell={selectedCell} modelChoice={modelChoice} />
-      </div>
-
-      {/* 2. Floating Hazard Legend (Bottom-Right) */}
-      <div className="absolute bottom-6 right-6 z-[400] bg-[#0F172A]/90 backdrop-blur border border-[#1E293B] rounded p-4 w-56 shadow-2xl pointer-events-auto text-[#F8FAFC]">
-        <h4 className="text-[10px] text-[#94A3B8] mb-3 uppercase tracking-widest font-semibold border-b border-[#1E293B] pb-2 font-mono">
-          Hazard Legend
-        </h4>
-        <div className="space-y-3 mt-3 text-xs font-mono">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 bg-[#EF4444] opacity-80 border border-[#EF4444]"></span>
+    <div className="relative w-full h-full min-h-[350px] bg-[#0F172A] flex-1 overflow-hidden">
+      {/* Dynamic Compact Hazard Legend (Bottom-Right) */}
+      <div className="absolute bottom-4 right-4 z-[400] bg-[#0F172A]/95 backdrop-blur border border-[#1E293B] rounded-lg p-3 shadow-xl pointer-events-auto text-[#F8FAFC]">
+        <div className="text-[10px] text-[#94A3B8] font-bold uppercase tracking-wider font-mono border-b border-[#1E293B] pb-1.5 mb-2 flex items-center justify-between gap-3">
+          <span>Hazard Legend</span>
+          <span className="text-[#3B82F6]">{isOptionB ? 'Opt B' : 'Opt A'}</span>
+        </div>
+        <div className="space-y-1.5 text-xs font-mono">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#EF4444]"></span>
               <span>Critical</span>
             </div>
             <span className="text-[#94A3B8]">{isOptionB ? '≥35%' : '≥35%'}</span>
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 bg-[#F59E0B] opacity-80 border border-[#F59E0B]"></span>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#F59E0B]"></span>
               <span>Elevated</span>
             </div>
             <span className="text-[#94A3B8]">{isOptionB ? '20-35%' : '10-35%'}</span>
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 bg-[#10B981] opacity-80 border border-[#10B981]"></span>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#10B981]"></span>
               <span>Nominal</span>
             </div>
             <span className="text-[#94A3B8]">{isOptionB ? '<20%' : '<10%'}</span>
           </div>
-          <div className="pt-2 border-t border-[#1E293B] mt-2">
-            <div className="flex items-center gap-2 text-xs text-[#94A3B8]">
-              <Radio className="w-4 h-4 text-[#3B82F6]" />
-              <span>Active 500m Grid</span>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* 3. Base Leaflet Map Canvas */}
+      {/* Base Leaflet Map Canvas */}
       <MapContainer
         center={lagosCenter}
         zoom={11}
@@ -111,7 +100,7 @@ export default function FloodMap({
           zoom={activeLocation ? 13 : 11}
         />
 
-        {/* 100% Free, Zero-Key OpenStreetMap Layer with high contrast dark filter */}
+        {/* 100% Free OpenStreetMap Cartography */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -119,7 +108,7 @@ export default function FloodMap({
           maxZoom={19}
         />
 
-        {/* Grid Cells */}
+        {/* 1,200+ Spatial Nodes */}
         {gridData?.map((cell, idx) => {
           const isSelected = selectedCell?.grid_id === cell.grid_id;
           const style = getMarkerStyle(cell.tier, isSelected);
@@ -140,11 +129,11 @@ export default function FloodMap({
               }}
             >
               <Popup>
-                <div className="p-1 text-[#F8FAFC] text-xs space-y-1">
+                <div className="p-1 text-[#F8FAFC] text-xs space-y-1 font-sans">
                   <div className="font-bold text-sm text-white flex items-center justify-between gap-2 border-b border-[#1E293B] pb-1">
-                    <span>{cell.grid_id}</span>
+                    <span className="font-mono">{cell.grid_id}</span>
                     <span
-                      className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase"
+                      className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase font-mono"
                       style={{
                         backgroundColor: cell.tier === 'severe' ? '#EF444430' : cell.tier === 'moderate' ? '#F59E0B30' : '#10B98130',
                         color: cell.tier === 'severe' ? '#EF4444' : cell.tier === 'moderate' ? '#F59E0B' : '#10B981'
@@ -167,6 +156,7 @@ export default function FloodMap({
     </div>
   );
 }
+
 
 
 

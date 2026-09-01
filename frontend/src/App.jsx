@@ -4,7 +4,7 @@ import FloodMap from './components/FloodMap';
 import ScenarioControls from './components/ScenarioControls';
 import CellDetails from './components/CellDetails';
 import ModelTransparencyModal from './components/ModelTransparencyModal';
-import { Radio, Bell, Settings, Menu, X, Satellite } from 'lucide-react';
+import { Map, Sliders, Target, BarChart3, Satellite } from 'lucide-react';
 
 export default function App() {
   const [params, setParams] = useState({
@@ -23,7 +23,7 @@ export default function App() {
   const [activeLocation, setActiveLocation] = useState(null);
   const [loadingSimulation, setLoadingSimulation] = useState(false);
   const [transparencyModalOpen, setTransparencyModalOpen] = useState(false);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [mobileTab, setMobileTab] = useState('map'); // 'map' | 'controls' | 'inspector'
 
   useEffect(() => {
     fetchKeyLocations();
@@ -104,122 +104,135 @@ export default function App() {
 
   return (
     <div className="bg-[#0B0F19] text-[#F8FAFC] h-screen w-screen overflow-hidden flex flex-col font-sans antialiased">
-      {/* 1. TopNavBar (h-14 fixed) */}
-      <header className="bg-[#0F172A] text-[#F8FAFC] flex justify-between items-center px-4 w-full border-b border-[#1E293B] fixed top-0 left-0 right-0 z-50 h-14 shadow-sm">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-            className="lg:hidden p-1.5 text-[#94A3B8] hover:text-white bg-[#1E293B] rounded cursor-pointer"
-          >
-            {mobileSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-
-          <div className="flex items-center gap-2 border-r border-[#1E293B] pr-4">
-            <Satellite className="w-5 h-5 text-[#3B82F6]" />
-            <span className="font-semibold tracking-tight text-sm uppercase font-mono">
-              Lagos Hydro-Predictive Node
+      {/* 1. Top Navigation Bar */}
+      <header className="bg-[#0F172A] text-[#F8FAFC] flex justify-between items-center px-4 w-full border-b border-[#1E293B] shrink-0 h-13 z-50">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 border-r border-[#1E293B] pr-3">
+            <Satellite className="w-4 h-4 text-[#3B82F6]" />
+            <span className="font-bold tracking-tight text-xs uppercase font-mono">
+              Lagos Flood Risk Platform
             </span>
           </div>
 
-          <div className="hidden sm:flex gap-2 items-center">
-            <span className="bg-[#1E293B] px-2 py-0.5 rounded text-[#94A3B8] font-mono text-xs border border-[#1E293B]">
+          <div className="hidden sm:flex gap-2 items-center font-mono">
+            <span className="bg-[#1E293B] px-2 py-0.5 rounded text-[#94A3B8] text-[11px] border border-[#1E293B]">
               RES: 500m
             </span>
-            <span className="bg-[#10B981]/10 text-[#10B981] px-2 py-0.5 rounded font-mono text-[10px] uppercase border border-[#10B981]/20 flex items-center gap-1.5">
+            <span className="bg-[#10B981]/10 text-[#10B981] px-2 py-0.5 rounded text-[10px] uppercase border border-[#10B981]/20 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
-              <span>Sys Nominal</span>
+              <span>Online</span>
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setTransparencyModalOpen(true)}
-            className="bg-[#F8FAFC] text-[#0B0F19] px-3 py-1 rounded text-xs font-bold hover:bg-gray-200 transition-colors uppercase tracking-wide cursor-pointer shadow-sm"
-          >
-            Validation Matrix
-          </button>
-          <div className="flex gap-1 border-l border-[#1E293B] pl-3">
-            <button
-              onClick={() => setTransparencyModalOpen(true)}
-              className="text-[#94A3B8] hover:text-white hover:bg-[#1E293B] transition-colors p-1.5 rounded cursor-pointer"
-              title="Notifications"
-            >
-              <Bell className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setTransparencyModalOpen(true)}
-              className="text-[#94A3B8] hover:text-white hover:bg-[#1E293B] transition-colors p-1.5 rounded cursor-pointer"
-              title="Settings"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
+        {/* Action: Validation Matrix Modal Trigger */}
+        <button
+          onClick={() => setTransparencyModalOpen(true)}
+          className="bg-[#1E293B] hover:bg-[#334155] text-slate-100 border border-[#334155] px-2.5 py-1 rounded text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+        >
+          <BarChart3 className="w-3.5 h-3.5 text-[#3B82F6]" />
+          <span>Validation Matrix</span>
+        </button>
       </header>
 
-      {/* 2. Emergency Notice Bar (fixed top-14) */}
-      <CaveatBanner onOpenTransparencyModal={() => setTransparencyModalOpen(true)} />
-
-      {/* 3. Main Workspace Layout (mt-[86px]) */}
-      <div className="flex flex-1 mt-[86px] relative h-[calc(100vh-86px)] overflow-hidden">
-        {/* Left Sidebar (Desktop & Mobile Drawer) */}
-        <div
-          className={`${
-            mobileSidebarOpen ? 'fixed inset-0 top-[86px] z-50 bg-[#0F172A] block' : 'hidden'
-          } lg:block lg:relative w-full lg:w-[380px] shrink-0 h-full`}
+      {/* 2. Grounded Early-Stage Notice Bar */}
+      <div className="bg-[#F59E0B]/10 border-b border-[#F59E0B]/20 px-4 py-1.5 shrink-0 flex items-center justify-between text-xs font-mono">
+        <p className="text-[#F59E0B] text-[11px] truncate">
+          <strong>MODEL NOTICE:</strong> Trained on 499 known events across 28 confirmed sectors in Lagos. Option B safety tiers prioritize catching real floods (up to 92% sensitivity).
+        </p>
+        <button
+          onClick={() => setTransparencyModalOpen(true)}
+          className="hidden md:inline text-[10px] text-[#F59E0B] underline hover:text-white cursor-pointer ml-3 shrink-0 uppercase"
         >
-          {mobileSidebarOpen && (
-            <div className="flex justify-between items-center p-4 border-b border-[#1E293B] lg:hidden">
-              <span className="font-bold text-xs uppercase font-mono text-white">Telemetry Controls</span>
-              <button
-                onClick={() => setMobileSidebarOpen(false)}
-                className="p-1 text-[#94A3B8] hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          )}
+          View 5-Fold Metrics
+        </button>
+      </div>
 
-          <ScenarioControls
-            params={params}
-            setParams={setParams}
-            onRunSimulation={() => {
-              runSimulation();
-              setMobileSidebarOpen(false);
-            }}
-            loadingSimulation={loadingSimulation}
-            summary={summary}
-            keyLocations={keyLocations}
-            activeLocation={activeLocation}
-            onSelectLocation={(loc) => {
-              handleSelectLocation(loc);
-              setMobileSidebarOpen(false);
-            }}
-          />
-        </div>
+      {/* 3. Mobile View Switcher Tabs (Visible on screens < 1024px) */}
+      <div className="lg:hidden flex border-b border-[#1E293B] bg-[#0F172A] shrink-0 text-xs font-mono">
+        <button
+          onClick={() => setMobileTab('map')}
+          className={`flex-1 py-2 text-center flex items-center justify-center gap-1.5 border-b-2 transition ${
+            mobileTab === 'map'
+              ? 'border-[#3B82F6] text-[#3B82F6] font-bold bg-[#3B82F6]/10'
+              : 'border-transparent text-[#94A3B8] hover:text-white'
+          }`}
+        >
+          <Map className="w-3.5 h-3.5" />
+          <span>Map View</span>
+        </button>
+        <button
+          onClick={() => setMobileTab('controls')}
+          className={`flex-1 py-2 text-center flex items-center justify-center gap-1.5 border-b-2 transition ${
+            mobileTab === 'controls'
+              ? 'border-[#3B82F6] text-[#3B82F6] font-bold bg-[#3B82F6]/10'
+              : 'border-transparent text-[#94A3B8] hover:text-white'
+          }`}
+        >
+          <Sliders className="w-3.5 h-3.5" />
+          <span>Telemetry Controls</span>
+        </button>
+        <button
+          onClick={() => setMobileTab('inspector')}
+          className={`flex-1 py-2 text-center flex items-center justify-center gap-1.5 border-b-2 transition ${
+            mobileTab === 'inspector'
+              ? 'border-[#3B82F6] text-[#3B82F6] font-bold bg-[#3B82F6]/10'
+              : 'border-transparent text-[#94A3B8] hover:text-white'
+          }`}
+        >
+          <Target className="w-3.5 h-3.5" />
+          <span>Node Details</span>
+        </button>
+      </div>
 
-        {/* Right Main Map Canvas with Floating Inspector */}
-        <main className="flex-1 relative bg-[#0B0F19] h-full overflow-hidden flex flex-col">
-          <FloodMap
-            gridData={gridData}
+      {/* 4. Main Operational Layout */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Left Sidebar (Desktop: always visible | Mobile: visible on 'controls' or 'inspector' tab) */}
+        <aside
+          className={`w-full lg:w-[380px] xl:w-[400px] shrink-0 border-r border-[#1E293B] bg-[#0B0F19] overflow-y-auto p-4 space-y-4 ${
+            mobileTab === 'map' ? 'hidden lg:block' : 'block'
+          }`}
+        >
+          {/* Spatial Node Inspector (Top of Sidebar) */}
+          <CellDetails
             selectedCell={selectedCell}
-            onSelectCell={(cell) => setSelectedCell(cell)}
-            activeLocation={activeLocation}
             modelChoice={params.model_choice}
           />
 
-          {/* Mobile Bottom Inspector Drawer (visible on mobile only) */}
-          <div className="sm:hidden p-3 bg-[#0F172A] border-t border-[#1E293B] shrink-0">
-            <CellDetails
-              selectedCell={selectedCell}
-              modelChoice={params.model_choice}
+          {/* Scenario Telemetry Controls */}
+          {mobileTab !== 'inspector' && (
+            <ScenarioControls
+              params={params}
+              setParams={setParams}
+              onRunSimulation={runSimulation}
+              loadingSimulation={loadingSimulation}
+              summary={summary}
+              keyLocations={keyLocations}
+              activeLocation={activeLocation}
+              onSelectLocation={handleSelectLocation}
             />
-          </div>
+          )}
+        </aside>
+
+        {/* Right Map Canvas (Desktop: always visible | Mobile: visible on 'map' tab) */}
+        <main
+          className={`flex-1 relative bg-[#0F172A] h-full overflow-hidden ${
+            mobileTab !== 'map' ? 'hidden lg:block' : 'block'
+          }`}
+        >
+          <FloodMap
+            gridData={gridData}
+            selectedCell={selectedCell}
+            onSelectCell={(cell) => {
+              setSelectedCell(cell);
+            }}
+            activeLocation={activeLocation}
+            modelChoice={params.model_choice}
+          />
         </main>
       </div>
 
-      {/* 4. Methodology & Transparency Modal */}
+      {/* 5. Methodology & Validation Modal */}
       <ModelTransparencyModal
         isOpen={transparencyModalOpen}
         onClose={() => setTransparencyModalOpen(false)}
@@ -227,6 +240,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 
