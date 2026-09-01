@@ -2,7 +2,7 @@
 FROM node:22-alpine AS frontend-builder
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
@@ -23,15 +23,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Security: Create non-privileged user
+RUN useradd -m -u 10001 appuser
+
 # Copy backend application, models, and data
-COPY app/ ./app/
-COPY models/ ./models/
-COPY data/interim/grid_enriched.geojson ./data/interim/grid_enriched.geojson
+COPY --chown=appuser:appuser app/ ./app/
+COPY --chown=appuser:appuser models/ ./models/
+COPY --chown=appuser:appuser data/interim/grid_enriched.geojson ./data/interim/grid_enriched.geojson
 
 # Copy compiled frontend from Stage 1 into static mount directory
-COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
+COPY --chown=appuser:appuser --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
+USER appuser
 EXPOSE 8000
 
 ENV PORT=8000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD curl -f http://127.0.0.1:8000/api/health || exit 1
+
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+

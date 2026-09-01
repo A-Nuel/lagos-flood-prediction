@@ -1,30 +1,57 @@
-import React from 'react';
-import { X, CheckCircle2, AlertOctagon, HelpCircle, BarChart3, Layers, ShieldCheck, Cpu, Database } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { X, Cpu, Layers, BarChart3 } from 'lucide-react';
 
 export default function ModelTransparencyModal({ isOpen, onClose }) {
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-3xl animate-in fade-in duration-300 pointer-events-auto">
-      <div className="glass-panel border border-slate-700/80 rounded-3xl w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-[0_25px_70px_rgba(0,0,0,0.95)] text-slate-100 flex flex-col">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+      onClick={onClose}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200 pointer-events-auto"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl text-slate-100 flex flex-col"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 sm:p-6 border-b border-slate-800/80 bg-slate-950/60 sticky top-0 z-10 backdrop-blur-xl">
+        <div className="flex items-center justify-between p-5 sm:p-6 border-b border-slate-800 bg-slate-950/80 sticky top-0 z-10">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-cyan-500/15 border border-cyan-500/30 rounded-2xl text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
+            <div className="p-2.5 bg-cyan-950 border border-cyan-700 rounded-xl text-cyan-400">
               <Cpu className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-extrabold text-white tracking-tight">Model Validation & Hydro-Tactical Methodology</h2>
-              <p className="text-[11px] text-slate-400 font-mono">5-FOLD SPATIAL CROSS-VALIDATION & SHAP ANALYSIS</p>
+              <h2 id="modal-title" className="text-lg font-bold text-white tracking-tight">
+                Model Validation & Hydro-Tactical Methodology
+              </h2>
+              <p className="text-xs text-slate-400 font-mono">5-FOLD SPATIAL CROSS-VALIDATION & SHAP ATTRIBUTION</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800/80 rounded-2xl transition cursor-pointer"
+            aria-label="Close modal"
+            className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
+
 
         {/* Content */}
         <div className="p-5 sm:p-6 space-y-6 text-sm text-slate-300">

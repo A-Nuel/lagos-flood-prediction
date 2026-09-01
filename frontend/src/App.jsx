@@ -189,7 +189,7 @@ export default function App() {
         </aside>
 
         {/* Right Map Canvas & Docked Inspector */}
-        <main className="flex-1 flex flex-col relative h-[500px] lg:h-auto overflow-hidden">
+        <main className="flex-1 flex flex-col relative h-[calc(100dvh-120px)] lg:h-auto overflow-hidden">
           {/* Map */}
           <div className="flex-1 w-full h-full relative">
             <FloodMap
@@ -197,6 +197,7 @@ export default function App() {
               selectedCell={selectedCell}
               onSelectCell={(cell) => setSelectedCell(cell)}
               activeLocation={activeLocation}
+              modelChoice={params.model_choice}
             />
           </div>
 
@@ -209,6 +210,7 @@ export default function App() {
           </div>
         </main>
       </div>
+
 
       {/* 4. Methodology Modal */}
       <ModelTransparencyModal

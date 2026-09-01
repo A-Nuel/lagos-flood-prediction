@@ -19,13 +19,15 @@ export default function ScenarioControls({
     setWeatherNotice(null);
     try {
       const res = await fetch(
-        'https://api.open-meteo.com/v1/forecast?latitude=6.5244&longitude=3.3792&daily=precipitation_sum&timezone=Africa%2FLagos'
+        'https://api.open-meteo.com/v1/forecast?latitude=6.5244&longitude=3.3792&daily=precipitation_sum&timezone=Africa%2FLagos',
+        { signal: AbortSignal.timeout(6000) }
       );
+      if (!res.ok) throw new Error(`Weather service returned HTTP ${res.status}`);
       const data = await res.json();
-      if (data?.daily?.precipitation_sum) {
-        const dailyRain = data.daily.precipitation_sum[0] || 0;
-        const past7d = data.daily.precipitation_sum.slice(0, 7).reduce((a, b) => a + b, 0);
-        const past3d = data.daily.precipitation_sum.slice(0, 3).reduce((a, b) => a + b, 0);
+      if (data?.daily?.precipitation_sum && Array.isArray(data.daily.precipitation_sum)) {
+        const dailyRain = Math.max(0, data.daily.precipitation_sum[0] || 0);
+        const past7d = Math.max(0, data.daily.precipitation_sum.slice(0, 7).reduce((a, b) => a + b, 0));
+        const past3d = Math.max(0, data.daily.precipitation_sum.slice(0, 3).reduce((a, b) => a + b, 0));
 
         setParams((prev) => ({
           ...prev,
@@ -36,14 +38,18 @@ export default function ScenarioControls({
 
         setWeatherNotice(`Synced live Lagos precipitation: ${dailyRain.toFixed(1)} mm (24h), ${past7d.toFixed(1)} mm (7-Day)`);
         setTimeout(() => setWeatherNotice(null), 5000);
+      } else {
+        throw new Error('Malformed precipitation payload');
       }
     } catch (e) {
-      console.error('Failed to fetch live weather:', e);
-      setWeatherNotice('Could not reach Open-Meteo. Maintained manual parameters.');
+      console.warn('Failed to fetch live weather:', e);
+      setWeatherNotice('Could not reach Open-Meteo service. Maintained current simulation values.');
+      setTimeout(() => setWeatherNotice(null), 5000);
     } finally {
       setFetchingWeather(false);
     }
   };
+
 
   const presetScenarios = [
     {

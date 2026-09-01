@@ -16,7 +16,8 @@ export default function FloodMap({
   gridData,
   selectedCell,
   onSelectCell,
-  activeLocation
+  activeLocation,
+  modelChoice = 'random_forest'
 }) {
   const lagosCenter = [6.5244, 3.3792];
 
@@ -49,33 +50,36 @@ export default function FloodMap({
     }
   };
 
+  const isOptionB = modelChoice === 'random_forest';
+
   return (
     <div className="relative w-full h-full min-h-[420px] bg-slate-950 flex flex-col">
-      {/* Risk Legend */}
+      {/* Dynamic Synchronized Risk Legend */}
       <div className="absolute bottom-4 right-4 z-[400] bg-slate-900/95 border border-slate-700/80 rounded-xl p-3 shadow-lg text-xs space-y-1.5 backdrop-blur-md pointer-events-auto">
-        <div className="font-bold text-slate-300 text-[11px] uppercase tracking-wider mb-1 border-b border-slate-800 pb-1">
-          Risk Tiers (Option B)
+        <div className="font-bold text-slate-300 text-[11px] uppercase tracking-wider mb-1 border-b border-slate-800 pb-1 flex items-center justify-between gap-2">
+          <span>{isOptionB ? 'Option B Tiers (Safety Standard)' : 'Option A Tiers (XGBoost)'}</span>
         </div>
         <div className="flex items-center gap-2 text-slate-200">
           <span className="w-3 h-3 rounded-full bg-red-500 border border-red-400" />
-          <span>Severe Flood Warning (P ≥ 0.35)</span>
+          <span>Severe Warning (P ≥ 0.35)</span>
         </div>
         <div className="flex items-center gap-2 text-slate-200">
           <span className="w-3 h-3 rounded-full bg-amber-500 border border-amber-400" />
-          <span>Moderate Advisory (P ≥ 0.20)</span>
+          <span>Moderate Advisory ({isOptionB ? 'P ≥ 0.20' : 'P ≥ 0.10'})</span>
         </div>
         <div className="flex items-center gap-2 text-slate-200">
           <span className="w-3 h-3 rounded-full bg-emerald-500 border border-emerald-400" />
-          <span>Low Risk (P &lt; 0.20)</span>
+          <span>Low Risk ({isOptionB ? 'P < 0.20' : 'P < 0.10'})</span>
         </div>
       </div>
 
-      {/* Main Map */}
+      {/* Main Map with Canvas acceleration for high performance */}
       <MapContainer
         center={lagosCenter}
         zoom={11}
         scrollWheelZoom={true}
         zoomControl={false}
+        preferCanvas={true}
         className="w-full h-full"
       >
         <ZoomControl position="topright" />
@@ -140,5 +144,6 @@ export default function FloodMap({
     </div>
   );
 }
+
 
 

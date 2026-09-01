@@ -1,8 +1,10 @@
 import os
 import json
 import logging
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 from pathlib import Path
+from contextlib import asynccontextmanager
+from functools import lru_cache
 
 import numpy as np
 import pandas as pd
@@ -16,18 +18,62 @@ from pydantic import BaseModel, Field
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("lagos-flood-api")
 
+# ── Load Assets via Modern Lifespan Handler ──────────────
+rf_model = None
+xgb_model = None
+grid_gdf = None
+grid_features_df = None
+
+FEATURES_ORDER = [
+    "rainfall_mm", "rainfall_3d_sum", "rainfall_7d_sum", "is_rainy_season",
+    "elevation_m", "slope_deg", "impervious_pct", "road_density",
+    "dist_to_water_m", "drain_density", "drain_coverage_gap", "composite_blockage_risk"
+]
+
+def load_assets():
+    global rf_model, xgb_model, grid_gdf, grid_features_df
+    try:
+        if rf_model is None and os.path.exists("models/rf_baseline.joblib"):
+            rf_model = joblib.load("models/rf_baseline.joblib")
+            logger.info("Loaded Random Forest model.")
+        if xgb_model is None and os.path.exists("models/xgb_baseline.json"):
+            xgb_model = xgb.XGBClassifier()
+            xgb_model.load_model("models/xgb_baseline.json")
+            logger.info("Loaded XGBoost model.")
+
+        grid_path = "data/interim/grid_enriched.geojson"
+        if grid_gdf is None and os.path.exists(grid_path):
+            grid_gdf = gpd.read_file(grid_path)
+            for col in ["elevation_m", "slope_deg", "impervious_pct", "road_density", "dist_to_water_m", "drain_density", "drain_coverage_gap", "composite_blockage_risk"]:
+                if col in grid_gdf.columns:
+                    grid_gdf[col] = grid_gdf[col].fillna(0)
+            grid_features_df = pd.DataFrame(grid_gdf)
+            logger.info(f"Loaded {len(grid_gdf)} grid cells from {grid_path}.")
+    except Exception as e:
+        logger.error(f"Error loading assets: {e}")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    load_assets()
+    yield
+
 app = FastAPI(
     title="Lagos Flood Risk Prediction API",
     description="Early-stage machine learning risk indicators for urban flood safety in Lagos State, Nigeria.",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
-# Enable CORS for frontend integration
+# ── CORS Configuration (Defense-in-depth) ────────────────
+raw_origins = os.getenv("ALLOWED_ORIGINS", "*")
+origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
+is_wildcard = origins == ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=origins,
+    allow_credentials=not is_wildcard,
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -63,18 +109,6 @@ MODEL_METRICS = {
     }
 }
 
-# ── Load Models and Grid Data at Startup ──────────────────
-rf_model = None
-xgb_model = None
-grid_gdf = None
-grid_features_df = None
-
-FEATURES_ORDER = [
-    "rainfall_mm", "rainfall_3d_sum", "rainfall_7d_sum", "is_rainy_season",
-    "elevation_m", "slope_deg", "impervious_pct", "road_density",
-    "dist_to_water_m", "drain_density", "drain_coverage_gap", "composite_blockage_risk"
-]
-
 KEY_LAGOS_HUBS = [
     {"name": "Alimosho (Ipaja/Egbeda)", "lat": 6.6059, "lon": 3.2709, "description": "High population density with vulnerable canal drainage"},
     {"name": "Lekki Phase 1 / Agungi", "lat": 6.4698, "lon": 3.5852, "description": "Low-lying coastal corridor susceptible to drainage blockage"},
@@ -88,55 +122,30 @@ KEY_LAGOS_HUBS = [
     {"name": "Epe Waterfront", "lat": 6.5840, "lon": 3.9795, "description": "Eastern lagoon perimeter"}
 ]
 
-@app.on_event("startup")
-def load_assets():
-    global rf_model, xgb_model, grid_gdf, grid_features_df
-    try:
-        if rf_model is None and os.path.exists("models/rf_baseline.joblib"):
-            rf_model = joblib.load("models/rf_baseline.joblib")
-            logger.info("Loaded Random Forest model.")
-        if xgb_model is None and os.path.exists("models/xgb_baseline.json"):
-            xgb_model = xgb.XGBClassifier()
-            xgb_model.load_model("models/xgb_baseline.json")
-            logger.info("Loaded XGBoost model.")
-
-        grid_path = "data/interim/grid_enriched.geojson"
-        if grid_gdf is None and os.path.exists(grid_path):
-            grid_gdf = gpd.read_file(grid_path)
-            # Fill missing static columns
-            for col in ["elevation_m", "slope_deg", "impervious_pct", "road_density", "dist_to_water_m", "drain_density", "drain_coverage_gap", "composite_blockage_risk"]:
-                if col in grid_gdf.columns:
-                    grid_gdf[col] = grid_gdf[col].fillna(0)
-            grid_features_df = pd.DataFrame(grid_gdf)
-            logger.info(f"Loaded {len(grid_gdf)} grid cells from {grid_path}.")
-    except Exception as e:
-        logger.error(f"Error loading assets: {e}")
-
-# Immediately initialize on import
+# Ensure assets are loaded immediately if imported without lifespan
 load_assets()
-
 
 # ── Pydantic Request & Response Schemas ───────────────────
 
 class SinglePredictionRequest(BaseModel):
     grid_id: Optional[str] = None
-    lat: Optional[float] = None
-    lon: Optional[float] = None
-    rainfall_mm: float = Field(default=25.0, description="Daily 24h rainfall in mm")
-    rainfall_3d_sum: float = Field(default=60.0, description="3-day cumulative rainfall in mm")
-    rainfall_7d_sum: float = Field(default=120.0, description="7-day cumulative rainfall in mm")
-    is_rainy_season: int = Field(default=1, description="1 if rainy season (Apr-Oct), 0 otherwise")
-    blockage_multiplier: float = Field(default=1.0, description="Multiplier for blockage risk (e.g., 1.5 = 50% increase)")
-    model_choice: str = Field(default="random_forest", description="'random_forest' (Option B - Safety Default) or 'xgboost' (Option A)")
+    lat: Optional[float] = Field(default=None, ge=4.0, le=14.0, description="Latitude in Nigeria bounds")
+    lon: Optional[float] = Field(default=None, ge=2.0, le=15.0, description="Longitude in Nigeria bounds")
+    rainfall_mm: float = Field(default=25.0, ge=0.0, le=500.0, description="Daily 24h rainfall in mm")
+    rainfall_3d_sum: float = Field(default=60.0, ge=0.0, le=1000.0, description="3-day cumulative rainfall in mm")
+    rainfall_7d_sum: float = Field(default=120.0, ge=0.0, le=2000.0, description="7-day cumulative rainfall in mm")
+    is_rainy_season: Literal[0, 1] = Field(default=1, description="1 if rainy season (Apr-Oct), 0 otherwise")
+    blockage_multiplier: float = Field(default=1.0, ge=0.1, le=5.0, description="Multiplier for blockage risk (e.g., 1.5 = 50% increase)")
+    model_choice: Literal["random_forest", "xgboost"] = Field(default="random_forest", description="'random_forest' (Option B - Safety Default) or 'xgboost' (Option A)")
 
 
 class SimulationRequest(BaseModel):
-    rainfall_mm: float = Field(default=35.0, description="Daily rainfall mm")
-    rainfall_3d_sum: float = Field(default=80.0, description="3-day rainfall sum mm")
-    rainfall_7d_sum: float = Field(default=150.0, description="7-day rainfall sum mm")
-    is_rainy_season: int = Field(default=1, description="Rainy season active (1 or 0)")
-    blockage_multiplier: float = Field(default=1.0, description="Blockage risk multiplier (0.5 to 2.5)")
-    model_choice: str = Field(default="random_forest", description="'random_forest' or 'xgboost'")
+    rainfall_mm: float = Field(default=35.0, ge=0.0, le=500.0, description="Daily rainfall mm")
+    rainfall_3d_sum: float = Field(default=80.0, ge=0.0, le=1000.0, description="3-day rainfall sum mm")
+    rainfall_7d_sum: float = Field(default=150.0, ge=0.0, le=2000.0, description="7-day rainfall sum mm")
+    is_rainy_season: Literal[0, 1] = Field(default=1, description="Rainy season active (1 or 0)")
+    blockage_multiplier: float = Field(default=1.0, ge=0.1, le=5.0, description="Blockage risk multiplier (0.5 to 2.5)")
+    model_choice: Literal["random_forest", "xgboost"] = Field(default="random_forest", description="'random_forest' or 'xgboost'")
 
 
 # ── Helper Functions ───────────────────────────────────────
@@ -160,6 +169,9 @@ def classify_tier(prob: float, model_type: str = "random_forest") -> Dict[str, A
 
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+
+# ── In-Memory Simulation Cache ─────────────────────────────
+_simulation_cache: Dict[str, Dict[str, Any]] = {}
 
 # ── API Routes ─────────────────────────────────────────────
 
@@ -216,13 +228,12 @@ def get_key_locations():
 
 
 @app.get("/api/grid-summary")
-def get_grid_summary(sample_limit: int = Query(default=1500, description="Max cells to return for web view")):
+def get_grid_summary(sample_limit: int = Query(default=1500, ge=10, le=10000, description="Max cells to return for web view")):
     """Returns essential grid cell properties and centroids for map rendering."""
     if grid_gdf is None:
         raise HTTPException(status_code=500, detail="Grid data not loaded")
     
-    # Subsample evenly across Lagos for smooth browser rendering
-    stride = max(1, len(grid_gdf) // sample_limit)
+    stride = max(1, len(grid_gdf) // max(1, sample_limit))
     sub_gdf = grid_gdf.iloc[::stride].copy()
     
     features = []
@@ -251,16 +262,13 @@ def predict_flood_risk(req: SinglePredictionRequest):
     if rf_model is None or xgb_model is None or grid_gdf is None:
         raise HTTPException(status_code=500, detail="Models or grid data unavailable")
 
-    # Find cell by grid_id or closest coordinate
     matched_row = None
     if req.grid_id and req.grid_id in grid_gdf["grid_id"].values:
         matched_row = grid_gdf[grid_gdf["grid_id"] == req.grid_id].iloc[0]
     elif req.lat is not None and req.lon is not None:
-        # Distance calculation to find nearest centroid
         dists = (grid_gdf["centroid_lat"] - req.lat)**2 + (grid_gdf["centroid_lon"] - req.lon)**2
         matched_row = grid_gdf.iloc[dists.argmin()]
     else:
-        # Default to central Lagos
         matched_row = grid_gdf.iloc[0]
 
     elev = float(matched_row.get("elevation_m", 10.0))
@@ -290,7 +298,6 @@ def predict_flood_risk(req: SinglePredictionRequest):
 
     X_input = pd.DataFrame([feature_values], columns=FEATURES_ORDER)
 
-    # Compute probabilities for both models
     rf_prob = float(rf_model.predict_proba(X_input)[0, 1])
     xgb_prob = float(xgb_model.predict_proba(X_input)[0, 1])
 
@@ -332,7 +339,10 @@ def run_simulation(sim: SimulationRequest):
     if rf_model is None or xgb_model is None or grid_gdf is None:
         raise HTTPException(status_code=500, detail="Models or grid data unavailable")
 
-    # Use subsampled grid (1,500 cells across Lagos) for fast real-time interactive mapping
+    cache_key = f"{sim.rainfall_mm}_{sim.rainfall_3d_sum}_{sim.rainfall_7d_sum}_{sim.is_rainy_season}_{sim.blockage_multiplier}_{sim.model_choice}"
+    if cache_key in _simulation_cache:
+        return _simulation_cache[cache_key]
+
     stride = max(1, len(grid_gdf) // 1200)
     sub = grid_gdf.iloc[::stride].copy()
 
@@ -387,7 +397,7 @@ def run_simulation(sim: SimulationRequest):
             "blockage": round(float(blockages.iloc[i]), 2)
         })
 
-    return {
+    response_data = {
         "simulation_parameters": {
             "rainfall_24h": sim.rainfall_mm,
             "rainfall_7d": sim.rainfall_7d_sum,
@@ -405,3 +415,11 @@ def run_simulation(sim: SimulationRequest):
         "grid_predictions": results,
         "disclaimer": DISCLAIMER_TEXT
     }
+
+    # Keep cache bounded to 50 recent simulations
+    if len(_simulation_cache) > 50:
+        _simulation_cache.pop(next(iter(_simulation_cache)))
+    _simulation_cache[cache_key] = response_data
+
+    return response_data
+

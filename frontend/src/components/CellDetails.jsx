@@ -18,33 +18,39 @@ export default function CellDetails({ selectedCell, modelChoice }) {
   const probPercent = Math.round((p || 0) * 100);
 
   const getTierInfo = (t) => {
+    const isOptionB = modelChoice === 'random_forest';
     switch (t) {
       case 'severe':
         return {
-          label: 'Severe Warning',
-          badgeClass: 'bg-red-950/60 text-red-300 border-red-800',
+          label: 'Severe Flood Warning',
+          badgeClass: 'bg-red-950/80 text-red-200 border-red-700 font-bold',
           barClass: 'bg-red-500',
           icon: ShieldAlert,
-          action: 'High danger of localized inundation. Clear secondary street drains, elevate sensitive assets.'
+          action: isOptionB
+            ? 'High danger of localized inundation. Clear secondary street drains, elevate sensitive ground assets.'
+            : 'High-confidence flood zone (>50% Precision). Immediate drainage clearance and asset protection required.'
         };
       case 'moderate':
         return {
           label: 'Moderate Advisory',
-          badgeClass: 'bg-amber-950/60 text-amber-300 border-amber-800',
+          badgeClass: 'bg-amber-950/80 text-amber-200 border-amber-700 font-bold',
           barClass: 'bg-amber-500',
           icon: AlertTriangle,
-          action: 'Heightened sensitivity warning. Inspect street gutters and monitor ongoing downpour.'
+          action: isOptionB
+            ? 'Safety Warning (92% Sensitivity): Precautionary alert. Inspect neighborhood gutters and monitor downpour.'
+            : 'Precautionary Advisory (63% Recall): Localized street ponding possible in low-elevation pockets.'
         };
       default:
         return {
           label: 'Low Risk',
-          badgeClass: 'bg-emerald-950/60 text-emerald-300 border-emerald-800',
+          badgeClass: 'bg-emerald-950/80 text-emerald-200 border-emerald-700 font-bold',
           barClass: 'bg-emerald-500',
           icon: ShieldCheck,
-          action: 'Baseline hydrological conditions. Standard monsoon awareness.'
+          action: 'Baseline hydrological conditions. Standard monsoon vigilance.'
         };
     }
   };
+
 
   const info = getTierInfo(tier);
   const Icon = info.icon;
