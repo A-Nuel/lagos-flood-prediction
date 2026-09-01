@@ -48,19 +48,29 @@ All models are evaluated strictly with **5-Fold Spatial GroupKFold Cross-Validat
 
 ## 🚀 Quickstart & Local Deployment
 
-### Option 1: Docker (Single Command Full-Stack)
+### Option 1: 1-Click Cloud Web Deployment (Free / Zero-Setup)
 
-```bash
-# Clone the repository
-git clone https://github.com/A-Nuel/lagos-flood-prediction.git
-cd lagos-flood-prediction
+#### Deploy to Render (Recommended - Free Tier)
+1. Go to [Render.com](https://render.com) and create an account.
+2. Click **New +** &rarr; **Blueprint** (or **Web Service**).
+3. Connect your GitHub repository: `https://github.com/A-Nuel/lagos-flood-prediction`.
+4. Render will automatically detect `render.yaml` and `Dockerfile`.
+5. Click **Apply** &mdash; Render builds and deploys your full-stack app with free SSL at `https://lagos-flood-prediction.onrender.com`.
 
-# Build and run with Docker Compose
-docker compose up --build
-```
-Access the application at `http://localhost:8000`.
+#### Deploy to Railway
+1. Go to [Railway.app](https://railway.app) and click **New Project** &rarr; **Deploy from GitHub Repo**.
+2. Select `A-Nuel/lagos-flood-prediction`.
+3. Railway automatically builds the multi-stage `Dockerfile` and gives you a live public HTTPS URL.
+
+#### Deploy to Hugging Face Spaces (Free ML Hosting)
+1. Go to [Hugging Face Spaces](https://huggingface.co/spaces) and click **Create new Space**.
+2. Select **Docker** as the Space SDK.
+3. Link your GitHub repo or push files &mdash; HF Spaces will automatically run the container on port `8000`/`7860`.
 
 ---
+
+### Option 2: Docker Local (Single Command Full-Stack)
+
 
 ### Option 2: Local Development (FastAPI + React Vite)
 
