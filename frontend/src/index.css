@@ -3,88 +3,52 @@
 
 @layer base {
   body {
-    @apply bg-[#030712] text-slate-100 font-sans antialiased overflow-hidden selection:bg-cyan-500 selection:text-slate-950;
+    @apply bg-slate-950 text-slate-100 font-sans antialiased selection:bg-blue-600 selection:text-white;
     color-scheme: dark;
   }
 }
 
-/* Custom Scrollbar for floating HUDs */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(3, 7, 18, 0.4);
+  background: #090d16;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.4);
-  border-radius: 9999px;
+  background: #334155;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(6, 182, 212, 0.6);
+  background: #475569;
 }
 
-/* Leaflet Map Full Bleed Overrides */
+/* Standard Leaflet overrides for dark mode */
 .leaflet-container {
   width: 100% !important;
   height: 100% !important;
-  background-color: #030712 !important;
+  background-color: #0b0f19 !important;
+  font-family: inherit !important;
 }
 
-/* Glassmorphic Tactical Dark Tooltip */
 .leaflet-popup-content-wrapper {
-  background: rgba(9, 13, 22, 0.85) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-radius: 1rem !important;
+  background: #0f172a !important;
+  border: 1px solid #334155 !important;
+  border-radius: 0.75rem !important;
   color: #f8fafc !important;
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 20px rgba(6, 182, 212, 0.15) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6) !important;
   padding: 0 !important;
 }
 
 .leaflet-popup-tip {
-  background: rgba(9, 13, 22, 0.85) !important;
-  backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: #0f172a !important;
+  border: 1px solid #334155 !important;
 }
 
 .leaflet-popup-content {
-  margin: 12px 14px !important;
+  margin: 10px 14px !important;
   line-height: 1.4 !important;
 }
 
-/* Radar Pulse Effect for Severe Warning Zones */
-@keyframes radar-pulse {
-  0% {
-    transform: scale(0.9);
-    opacity: 0.9;
-  }
-  50% {
-    transform: scale(1.6);
-    opacity: 0.2;
-  }
-  100% {
-    transform: scale(2.2);
-    opacity: 0;
-  }
-}
-
-.radar-ring {
-  animation: radar-pulse 2.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-}
-
-/* Subtle Glass Panel Hover Glows */
-.glass-panel {
-  background: rgba(9, 13, 22, 0.75);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
-}
-
-.glass-panel-glow:hover {
-  border-color: rgba(6, 182, 212, 0.3);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 25px rgba(6, 182, 212, 0.1);
-}
 

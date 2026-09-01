@@ -1,66 +1,51 @@
 import React, { useState } from 'react';
-import { ShieldAlert, Info, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { AlertTriangle, Info, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function CaveatBanner({ onOpenTransparencyModal }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-2xl w-[92%] sm:w-auto animate-in fade-in slide-in-from-top-4 duration-500 pointer-events-auto">
-      <div className="glass-panel border border-amber-500/30 rounded-2xl p-2.5 sm:px-4 sm:py-2 text-amber-200 shadow-[0_10px_35px_rgba(0,0,0,0.8),0_0_25px_rgba(245,158,11,0.15)] backdrop-blur-2xl">
-        <div className="flex items-center justify-between gap-3">
-          {/* Ticker Lead */}
-          <div className="flex items-center gap-2.5">
-            <div className="relative flex items-center justify-center">
-              <span className="absolute w-5 h-5 rounded-full bg-amber-400/20 radar-ring" />
-              <div className="p-1 bg-amber-500/20 border border-amber-400/40 rounded-lg text-amber-400">
-                <ShieldAlert className="w-4 h-4" />
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2">
-              <span className="text-xs font-bold text-amber-300 tracking-wide uppercase">
-                Early-Stage Risk Indicator
+    <div className="bg-amber-950/70 border-b border-amber-600/30 text-amber-200 px-4 py-2.5 text-xs">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
+        <div className="flex items-start gap-2.5">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+          <div>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <span className="font-bold text-amber-300 uppercase tracking-wide text-[11px]">
+                Early-Stage Risk Indicator Notice:
               </span>
-              <span className="hidden sm:inline text-slate-500 text-xs">•</span>
-              <span className="text-[11px] text-amber-200/80 font-mono">
-                499 Events across 28 Hubs (Option B: 92% Sensitivity)
+              <span>
+                Trained on <strong>499 known flood events across 28 confirmed locations in Lagos</strong> — not a certified meteorological forecast.
               </span>
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="text-amber-400 hover:text-amber-100 underline font-medium cursor-pointer inline-flex items-center gap-0.5 ml-1"
+              >
+                {expanded ? 'Show less' : 'Read full disclaimer'}
+                {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </button>
             </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={onOpenTransparencyModal}
-              className="text-[11px] font-semibold bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 px-2.5 py-1 rounded-lg border border-amber-500/30 transition flex items-center gap-1 cursor-pointer"
-            >
-              <Info className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Validation Matrix</span>
-            </button>
-
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="p-1 text-amber-400 hover:text-white rounded-lg hover:bg-amber-500/20 transition cursor-pointer"
-              title={expanded ? "Collapse Details" : "Expand Full Notice"}
-            >
-              {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
+            {expanded && (
+              <p className="mt-2 text-amber-200/90 leading-relaxed border-t border-amber-500/20 pt-2 text-[11px]">
+                Precision and recall on unseen terrain are moderate (~50%), meaning roughly half of flagged alerts may be false alarms, and some real flood risk may be missed. 
+                <strong className="text-amber-100 block sm:inline sm:ml-1">
+                  Option B safety tiers intentionally prioritize catching real floods (up to 92% sensitivity) over avoiding false alarms in emergency situations.
+                </strong>
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Expandable Deep Disclaimer */}
-        {expanded && (
-          <div className="mt-2.5 pt-2.5 border-t border-amber-500/20 text-xs text-amber-100/90 leading-relaxed space-y-1.5 animate-in fade-in duration-200">
-            <p>
-              This model operates on <strong>500m spatial grids</strong> trained on confirmed Lagos news and disaster rescue data. Precision and recall on unseen terrain are moderate (~50%). Roughly half of flagged alerts may represent heightened vulnerability rather than guaranteed inundation.
-            </p>
-            <p className="text-amber-300 font-medium">
-              Option B safety tiers intentionally minimize dangerous false negatives by maintaining up to 92% flood detection sensitivity.
-            </p>
-          </div>
-        )}
+        <button
+          onClick={onOpenTransparencyModal}
+          className="shrink-0 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-100 border border-amber-500/40 px-2.5 py-1 rounded-md text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer self-end md:self-center"
+        >
+          <Info className="w-3 h-3" />
+          <span>Validation Matrix</span>
+        </button>
       </div>
     </div>
   );
 }
+
 
