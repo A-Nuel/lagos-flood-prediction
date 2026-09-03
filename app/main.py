@@ -8,15 +8,18 @@ from functools import lru_cache
 
 import numpy as np
 import pandas as pd
-import geopandas as gpd
 import joblib
 import xgboost as xgb
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("lagos-flood-api")
+
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ── Load Assets via Modern Lifespan Handler ──────────────
 rf_model = None
@@ -33,24 +36,38 @@ FEATURES_ORDER = [
 def load_assets():
     global rf_model, xgb_model, grid_gdf, grid_features_df
     try:
-        if rf_model is None and os.path.exists("models/rf_baseline.joblib"):
-            rf_model = joblib.load("models/rf_baseline.joblib")
+        rf_path = BASE_DIR / "models" / "rf_baseline.joblib"
+        if rf_model is None and rf_path.exists():
+            rf_model = joblib.load(str(rf_path))
             logger.info("Loaded Random Forest model.")
-        if xgb_model is None and os.path.exists("models/xgb_baseline.json"):
+
+        xgb_path = BASE_DIR / "models" / "xgb_baseline.json"
+        if xgb_model is None and xgb_path.exists():
             xgb_model = xgb.XGBClassifier()
-            xgb_model.load_model("models/xgb_baseline.json")
+            xgb_model.load_model(str(xgb_path))
             logger.info("Loaded XGBoost model.")
 
-        grid_path = "data/interim/grid_enriched.geojson"
-        if grid_gdf is None and os.path.exists(grid_path):
-            grid_gdf = gpd.read_file(grid_path)
+        grid_path = BASE_DIR / "data" / "interim" / "grid_enriched.geojson"
+        if grid_gdf is None and grid_path.exists():
+            with open(grid_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            records = [feat.get("properties", {}) for feat in data.get("features", [])]
+            grid_gdf = pd.DataFrame(records)
             for col in ["elevation_m", "slope_deg", "impervious_pct", "road_density", "dist_to_water_m", "drain_density", "drain_coverage_gap", "composite_blockage_risk"]:
                 if col in grid_gdf.columns:
                     grid_gdf[col] = grid_gdf[col].fillna(0)
-            grid_features_df = pd.DataFrame(grid_gdf)
+            grid_features_df = grid_gdf
             logger.info(f"Loaded {len(grid_gdf)} grid cells from {grid_path}.")
     except Exception as e:
         logger.error(f"Error loading assets: {e}")
+
+def ensure_assets_loaded():
+    if rf_model is None or xgb_model is None or grid_gdf is None:
+        load_assets()
+
+# Pre-load assets on module import for serverless environments
+ensure_assets_loaded()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -63,6 +80,7 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
 
 # ── CORS Configuration (Defense-in-depth) ────────────────
 raw_origins = os.getenv("ALLOWED_ORIGINS", "*")

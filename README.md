@@ -50,7 +50,13 @@ All models are evaluated strictly with **5-Fold Spatial GroupKFold Cross-Validat
 
 ### Option 1: 1-Click Cloud Web Deployment (Free / Zero-Setup)
 
-#### Deploy to Render (Recommended - Free Tier)
+#### Deploy to Vercel (Frontend + Serverless API)
+1. Go to [Vercel.com](https://vercel.com) and log in with GitHub.
+2. Click **Add New...** &rarr; **Project** and import `A-Nuel/lagos-flood-prediction`.
+3. Vercel automatically detects `vercel.json`, builds the React Vite frontend, and provisions the FastAPI Python Serverless API in `api/index.py`.
+4. Click **Deploy** &mdash; your app is live at `https://lagos-flood-prediction.vercel.app`.
+
+#### Deploy to Render (Docker Multi-Stage)
 1. Go to [Render.com](https://render.com) and create an account.
 2. Click **New +** &rarr; **Blueprint** (or **Web Service**).
 3. Connect your GitHub repository: `https://github.com/A-Nuel/lagos-flood-prediction`.
@@ -68,6 +74,7 @@ All models are evaluated strictly with **5-Fold Spatial GroupKFold Cross-Validat
 3. Link your GitHub repo or push files &mdash; HF Spaces will automatically run the container on port `8000`/`7860`.
 
 ---
+
 
 ### Option 2: Docker Local (Single Command Full-Stack)
 
